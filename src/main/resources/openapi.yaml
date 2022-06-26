@@ -1,0 +1,379 @@
+---
+openapi: 3.0.0
+info:
+  title: Rental Entities API
+  description: Rental api for open source hosting of rental information for others on the internet to see and inquire about. The user story is simply a platform for rental entry, and display. This includes dynamic amenties, cost analysis; historical for hosts, dyanmic fees. Most importantly to the industry tendering process for rental booking.
+  version: 1.0.1
+servers:
+- url: https://virtserver.swaggerhub.com/TeamAang/Rentals/1.0.0
+  description: SwaggerHub API Auto Mocking
+security:
+- application:
+  - read
+  - write
+paths:
+  /rentals:
+    get:
+      summary: Rental listings available.
+      description: Get all Rentals with paging.
+      operationId: read
+      parameters:
+      - name: size
+        in: query
+        description: The size or limit of the returned results.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: page
+        in: query
+        description: The offset or starting point with zero-ith index.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: sort
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      responses:
+        "200":
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/RentalCollectionModel'
+    post:
+      summary: Add a rental to the listings on the platform.
+      description: Create new rental listing.
+      operationId: create
+      requestBody:
+        description: Rental object without an Id.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Rental'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/Rental'
+    patch:
+      summary: Update rental listed.
+      description: Update Rental using HTTP Patch and Json+Patch media.
+      operationId: update
+      requestBody:
+        description: JSON Merge Patch (RFC 7386) request body for a rental entity
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/MergePatch'
+            example:
+              name: Newly renovated beachside stay
+              cost: 199.99
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/Rental'
+  /rentals/{rentalId}:
+    get:
+      summary: Rental listing by Id.
+      description: Get a Rental by UUID.
+      operationId: getById
+      parameters:
+      - name: rentalId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application:hal+json:
+              schema:
+                $ref: '#/components/schemas/Rental'
+    delete:
+      summary: Remove a rental listed.
+      description: Delete rental using HTTP Delete method
+      operationId: delete
+      parameters:
+      - name: rentalId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+  /rentals/ping:
+    get:
+      summary: Server heartbeat operation.
+      description: Ping rentals entity service.
+      operationId: ping
+      responses:
+        "200":
+          description: OK
+        "408":
+          description: Request Timeout
+      security: []
+components:
+  schemas:
+    Rental:
+      required:
+      - name
+      - summary
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Name of a rental.
+          example: Banana Bay Beachside Escape
+        summary:
+          type: string
+          description: Brief summary, not for greeting from host.
+          example: Pet friendly riverside tropical beach side home in a community at Banana Bay in Perdito Bay.
+        hostGreeting:
+          type: string
+          description: A place for the rentals host to put a warm welcome.
+          example: Welcome to my little slice of heaven. It is a pleasure to offer you this apartment, equiped for even the highest energy pup or kitty you may have. Experience Florabama for yourself!
+        currentCostId:
+          type: string
+          description: Pricing of current market data, historical pricing of the unit if allowed to be seen.
+          format: uuid
+        cost:
+          type: number
+          description: Cost to rent unit for one day. Not including fees.
+          example: 99.99
+        specifications:
+          $ref: '#/components/schemas/Rental_specifications'
+      description: "Rental object that can be used to display a webpage for the Rental(s) provided. \nImages, Description, Historical pricing, Current Market price will exist as external resources based on the unique identifier of the rental."
+    BaseAmenities:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        icon:
+          type: string
+          description: string name or unicode for emoji/platform supported icon.
+          example: 🐈
+        name:
+          type: string
+          description: Name for amenity.
+        summary:
+          type: string
+          description: Brief description of offering.
+      description: The base class/interface for Amenities and platform default amenities.
+    Amenities:
+      required:
+      - icon
+      - name
+      properties:
+        rentalId:
+          type: string
+          format: uuid
+      description: The amenities schema is a list of offerings at a given rental location.
+      allOf:
+      - $ref: '#/components/schemas/BaseAmenities'
+      - type: object
+    PlatformAmenities:
+      properties:
+        tags:
+          uniqueItems: true
+          type: array
+          items:
+            $ref: '#/components/schemas/Categories'
+      allOf:
+      - $ref: '#/components/schemas/BaseAmenities'
+      - type: object
+    Costs:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fees:
+          uniqueItems: true
+          type: array
+          items:
+            $ref: '#/components/schemas/Fees'
+        rentalId:
+          type: string
+          format: uuid
+      description: The historical costs of the unit with fee breakdown, including clean up charges.
+    Fees:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: brief name for fee
+        icon:
+          type: string
+          description: string name for emoji code, or custom icon supported.
+        amount:
+          type: number
+          description: Cost of fee
+    PlatformFees:
+      description: Platform base fees for rental basics. Ex; Cost per-night, extended check out.
+      allOf:
+      - $ref: '#/components/schemas/Fees'
+      - type: object
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rentalId:
+          type: string
+          format: uuid
+        tenderStatus:
+          type: string
+          enum:
+          - Requested
+          - Accepted
+          - Rebuttal
+          - Denied
+        stayStatus:
+          type: string
+          enum:
+          - In Preparation
+          - Arrived
+          - Checked out
+        additionalFees:
+          uniqueItems: true
+          type: array
+          items:
+            $ref: '#/components/schemas/Fees'
+        originalCost:
+          allOf:
+          - $ref: '#/components/schemas/Costs'
+          - type: object
+      description: The tender request for a rental
+    Categories:
+      required:
+      - name
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    MergePatch:
+      type: object
+      description: JSON Merge Patch (RFC 7386) request body
+      example:
+        name: Update one field at a time. Merged into existing entity data.
+    CollectionModel:
+      required:
+      - _links
+      - content
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+        _links:
+          $ref: '#/components/schemas/CollectionModel__links'
+    HttpHATEOASLink:
+      required:
+      - href
+      type: object
+      properties:
+        href:
+          type: string
+          description: Any URI that is using http or https protocol
+          format: uri
+      description: A base type of objects representing links to resources.
+    RentalCollectionModel:
+      properties:
+        content:
+          type: array
+          items:
+            allOf:
+            - type: object
+            - $ref: '#/components/schemas/Rental'
+        _links:
+          $ref: '#/components/schemas/RentalCollectionModel__links'
+      description: Collection Model supporting HATEOAS for Rental entity.
+      readOnly: true
+      allOf:
+      - type: object
+      - $ref: '#/components/schemas/CollectionModel'
+    Rental_specifications:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        beds:
+          type: integer
+          example: 3
+        bedrooms:
+          type: integer
+          example: 2
+        petsAllowed:
+          type: boolean
+        amentitiesProvided:
+          type: boolean
+      description: Specifics of a rental/unit; Bedrooms, Beds, baths, half baths, pets allowed.
+      example: null
+    CollectionModel__links:
+      type: object
+      properties:
+        self:
+          allOf:
+          - $ref: '#/components/schemas/HttpHATEOASLink'
+          - type: object
+      example: null
+    RentalCollectionModel__links_self:
+      type: object
+      properties:
+        href:
+          example: https://kathysgetaway.vacations/rentals/3fa85f64-5717-4562-b3fc-2c963f66afa6
+      format: uri
+      example: null
+    RentalCollectionModel__links:
+      properties:
+        self:
+          $ref: '#/components/schemas/RentalCollectionModel__links_self'
+      example: null
+  securitySchemes:
+    application:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://kathysgetaway.vacations/oauth/token
+          scopes:
+            write: allows modifying resources
+            read: allows reading resources

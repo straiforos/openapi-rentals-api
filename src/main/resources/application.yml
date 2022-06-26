@@ -1,0 +1,25 @@
+---
+spring:
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+
+springfox:
+  documentation:
+    swagger:
+      v2:
+        path: /api-docs
+
+logging:
+  level:
+    com.redhat.consultant360: INFO
+    org.hibernate.SQL: ERROR
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: db
+        liveness:
+          include: ping

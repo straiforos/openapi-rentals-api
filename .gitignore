@@ -1,0 +1,6 @@
+FILES
+openapi.yaml-default.sha256
+VERSION
+src/main/java
+target
+templates/
